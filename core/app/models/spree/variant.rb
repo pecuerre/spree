@@ -1,6 +1,7 @@
 module Spree
   class Variant < Spree::Base
     acts_as_paranoid
+    acts_as_list
 
     include Spree::DefaultPrice
 
@@ -47,6 +48,10 @@ module Spree
       joins(:prices).where(deleted_at: nil).where('spree_prices.currency' => currency || Spree::Config[:currency]).where('spree_prices.amount IS NOT NULL')
     end
 
+    def self.having_orders
+      joins(:line_items).distinct
+    end
+
     def tax_category
       if self[:tax_category_id].nil?
         product.tax_category
@@ -87,6 +92,10 @@ module Spree
     # Default to master name
     def exchange_name
       is_master? ? name : options_text
+    end
+
+    def descriptive_name
+      is_master? ? name + ' - Master' : name + ' - ' + options_text
     end
 
     # use deleted? rather than checking the attribute directly. this
@@ -168,7 +177,7 @@ module Spree
       return 0 unless options.present?
 
       options.keys.map { |key|
-        m = "#{options[key]}_price_modifier_amount".to_sym
+        m = "#{key}_price_modifier_amount".to_sym
         if self.respond_to? m
           self.send(m, options[key])
         else

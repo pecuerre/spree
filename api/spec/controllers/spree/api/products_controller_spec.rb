@@ -145,21 +145,6 @@ module Spree
         end
       end
 
-      context "jsonp" do
-        it "retrieves a list of products of jsonp" do
-          api_get :index, {:callback => 'callback'}
-          expect(response.body).to match(/^callback\(.*\)$/)
-          expect(response.header['Content-Type']).to include('application/javascript')
-        end
-
-        # Regression test for #4332
-        it "does not escape quotes" do
-          api_get :index, {:callback => 'callback'}
-          expect(response.body).to match(/^callback\({"count":1,"total_count":1/)
-          expect(response.header['Content-Type']).to include('application/javascript')
-        end
-      end
-
       it "can search for products" do
         create(:product, :name => "The best product in the world")
         api_get :index, :q => { :name_cont => "best" }
@@ -328,6 +313,13 @@ module Spree
 
           api_post :create, :product => product_data
           expect(json_response['option_types'].count).to eq(2)
+        end
+
+        it "creates product with option_types ids" do
+          option_type = create(:option_type)
+          product_data.merge!(option_type_ids: [option_type.id])
+          api_post :create, product: product_data
+          expect(json_response['option_types'].first['id']).to eq option_type.id
         end
 
         it "creates with shipping categories" do
